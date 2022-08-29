@@ -12,12 +12,17 @@ import {
     uploadRouter,
     userRouter
 } from '../routes/index.js';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
+import socketController from '../controllers/sockets/socket.js';
 
-export class Server {
+export class RestServer {
 
     constructor() {
         this.app = express();
         this.port = process.env.PORT;
+        this.server = createServer(this.app);
+        this.io = new Server(this.server);
 
         this.path = {
             auth: '/api/auth',
@@ -28,14 +33,10 @@ export class Server {
             upload: '/api/uploads',
         }
 
-        // connect to DB cafe
         this.connectDB();
-        // middleware; para servir carpeta publica
-        // son funciones que siempre se ejecutan al levantar el server.
         this.middlewares();
-
-        //rutas de aplicación.
         this.routes();
+        this.sockets();
     }
 
     async connectDB() {
@@ -43,16 +44,9 @@ export class Server {
     }
 
     middlewares() {
-        // cors
         this.app.use(cors());
-
-        // lectura y Parseo del body
         this.app.use(express.json());
-
-        // directorio publico
         this.app.use(express.static('public'));
-
-        // carga de archivos
         this.app.use(fileUpload({
             useTempFiles: true,
             tempFileDir: '/tmp/',
@@ -70,8 +64,14 @@ export class Server {
         this.app.use(this.path.upload, uploadRouter);
     }
 
+    sockets() {
+        this.io.on('connection', (socket) => {
+            socketController(socket, this.io)
+        });
+    }
+
     listen() {
-        this.app.listen(this.port, () => {
+        this.server.listen(this.port, () => {
             console.log('listening on port ' + this.port);
         })
 

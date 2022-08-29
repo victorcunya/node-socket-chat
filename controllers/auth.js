@@ -9,24 +9,18 @@ const login = async (req = request, res = response) => {
     const { email, password } = req.body
 
     try {
-        // verificar si el user existe
         const user = await User.findOne({ email: email })
-        if (!user) {
+        if (!user)
             return res.status(400).json({ msg: 'User not found' });
-        }
 
-        // si está activo
-        if (!user.state) {
+        if (!user.state)
             return res.status(400).json({ msg: 'User deleted' });
-        }
 
-        //validar contraseña
         const validPwd = bcrypt.compareSync(password, user.password);
-        if (!validPwd) {
+        if (!validPwd)
             return res.status(400).json({ msg: 'password invalid' });
-        }
 
-        // generar JWT
+
         const token = await generateJWT(user.id);
 
         res.json({ user, token });
@@ -45,9 +39,7 @@ const googleSignIn = async (req = request, res = response) => {
 
     try {
         const googleUser = await googleVerify(id_token);
-
         const { name, email, image } = googleUser
-
         let user = await User.findOne({ email });
 
         if (!user) {
@@ -63,15 +55,12 @@ const googleSignIn = async (req = request, res = response) => {
             await user.save();
         }
 
-        // usuario dado de baja
-        if (!user.state) {
+        if (!user.state)
             return res.status(400).json({
                 msg: 'hable con administrador, user bloqueado'
             })
-        }
 
         const token = await generateJWT(user.id);
-
         res.json({
             token,
             user
@@ -86,7 +75,13 @@ const googleSignIn = async (req = request, res = response) => {
     }
 }
 
+const renovateToken = async (req, res = response) => {
+    const user = req.user;
+    const newToken = await generateJWT(user.id);
+    res.json({ user, newToken })
+}
+
 export {
-    login, googleSignIn
+    login, googleSignIn, renovateToken
 };
 
